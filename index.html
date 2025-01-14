@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMI Calculator with User Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #87CEEB;
+        }
+        .container {
+            width: 400px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        input {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #bmi-section {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>BMI Calculator</h1>
+
+    <!-- Login and Sign Up Section -->
+    <div id="auth-section">
+        <form id="signup-form">
+            <h2>Sign Up</h2>
+            <input type="text" id="signup-username" placeholder="Username" required>
+            <input type="password" id="signup-password" placeholder="Password" required>
+            <button type="button" onclick="signUpUser()">Sign Up</button>
+        </form>
+
+        <form id="login-form" style="margin-top: 20px;">
+            <h2>Log In</h2>
+            <input type="text" id="login-username" placeholder="Username" required>
+            <input type="password" id="login-password" placeholder="Password" required>
+            <button type="button" onclick="loginUser()">Log In</button>
+        </form>
+    </div>
+
+    <!-- BMI Section -->
+    <div id="bmi-section">
+        <form id="bmi-form">
+            <h2>BMI Calculator</h2>
+            <input type="number" id="height" placeholder="Height (in cm)" required>
+            <input type="number" id="weight" placeholder="Weight (in kg)" required>
+            <button type="button" onclick="calculateBMI()">Calculate BMI</button>
+        </form>
+        <div id="bmi-result"></div>
+
+        <h2>Saved BMI Calculations</h2>
+        <ul id="bmi-history"></ul>
+
+        <!-- Upload Health Info -->
+        <form id="upload-form">
+            <h2>Upload Health Info</h2>
+            <input type="file" id="health-file" required>
+            <button type="button" onclick="uploadHealthInfo()">Upload</button>
+        </form>
+        <div id="uploaded-file-info" style="margin-top: 20px;">
+            <h3>Uploaded File Details</h3>
+            <p id="file-name">No file uploaded.</p>
+            <p id="file-type"></p>
+            <div id="file-content" style="margin-top: 10px;"></div>
+        </div>
+
+        <button type="button" onclick="logoutUser()" style="margin-top: 20px; background-color: red;">Log Out</button>
+    </div>
+</div>
+
+<script>
+    const users = JSON.parse(localStorage.getItem('users')) || {};
+    let currentUser = null;
+
+    function signUpUser() {
+        const username = document.getElementById('signup-username').value;
+        const password = document.getElementById('signup-password').value;
+
+        if (users[username]) {
+            alert("Username already exists! Try logging in.");
+        } else {
+            users[username] = { password, bmiHistory: [] };
+            localStorage.setItem('users', JSON.stringify(users));
+            alert("Sign up successful! Please log in.");
+            document.getElementById('signup-form').reset();
+        }
+    }
+
+    function loginUser() {
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+
+        if (users[username] && users[username].password === password) {
+            currentUser = username;
+            alert("Login successful!");
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('bmi-section').style.display = 'block';
+            loadBMIHistory();
+        } else {
+            alert("Invalid credentials! Try again.");
+        }
+    }
+
+    function logoutUser() {
+        currentUser = null;
+        document.getElementById('auth-section').style.display = 'block';
+        document.getElementById('bmi-section').style.display = 'none';
+    }
+
+    function calculateBMI() {
+        const height = parseFloat(document.getElementById('height').value);
+        const weight = parseFloat(document.getElementById('weight').value);
+
+        if (isNaN(height) || isNaN(weight)) {
+            alert("Please enter valid height and weight.");
+            return;
+        }
+
+        const bmi = (weight / ((height / 100) ** 2)).toFixed(2);
+        let bmiCategory = '';
+
+        if (bmi < 18.5) {
+            bmiCategory = 'Underweight';
+        } else if (bmi >= 18.5 && bmi < 24.9) {
+            bmiCategory = 'Healthy';
+        } else if (bmi >= 25 && bmi < 29.9) {
+            bmiCategory = 'Overweight';
+        } else {
+            bmiCategory = 'Obese';
+        }
+
+        alert(`Your BMI is: ${bmi} (${bmiCategory})`);
+        saveBMI(bmi, bmiCategory);
+    }
+
+    function saveBMI(bmi, bmiCategory) {
+        if (currentUser) {
+            users[currentUser].bmiHistory.push({ bmi, category: bmiCategory });
+            localStorage.setItem('users', JSON.stringify(users));
+            loadBMIHistory();
+        }
+    }
+
+    function loadBMIHistory() {
+        const historyList = document.getElementById('bmi-history');
+        historyList.innerHTML = '';
+        const userHistory = users[currentUser]?.bmiHistory || [];
+        userHistory.forEach((entry, index) => {
+            const listItem = document.createElement('li');
+            listItem.textContent = `Entry ${index + 1}: ${entry.bmi} (${entry.category})`;
+            historyList.appendChild(listItem);
+        });
+    }
+
+    function uploadHealthInfo() {
+        const fileInput = document.getElementById('health-file');
+        const file = fileInput.files[0];
+        const fileNameElement = document.getElementById('file-name');
+        const fileTypeElement = document.getElementById('file-type');
+        const fileContentElement = document.getElementById('file-content');
+
+        if (!file) {
+            alert("Please select a file to upload.");
+            return;
+        }
+
+        fileNameElement.textContent = `File Name: ${file.name}`;
+        fileTypeElement.textContent = `File Type: ${file.type}`;
+
+        if (file.type.startsWith('text/')) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                fileContentElement.innerHTML = `<pre>${e.target.result}</pre>`;
+            };
+            reader.readAsText(file);
+        } else if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                fileContentElement.innerHTML = `<img src="${e.target.result}" alt="Uploaded Image" style="max-width: 100%;"/>`;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            fileContentElement.innerHTML = `<p>Preview not available for this file type.</p>`;
+        }
+
+        alert(`File "${file.name}" uploaded successfully!`);
+    }
+</script>
+</body>
+</html>
